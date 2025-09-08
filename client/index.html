@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WASD Game - Multiplayer Cooperative</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Arial", sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        overflow: hidden;
+      }
+
+      #game-container {
+        position: relative;
+        border: 3px solid #fff;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        background: #000;
+      }
+
+      #ui-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        pointer-events: none;
+        z-index: 1000;
+      }
+
+      .status-bar {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 5px;
+        font-size: 14px;
+        font-weight: bold;
+      }
+
+      .status-bar.top-left {
+        top: 10px;
+        left: 10px;
+      }
+
+      .status-bar.top-right {
+        top: 10px;
+        right: 10px;
+      }
+
+      .status-bar.bottom-left {
+        bottom: 10px;
+        left: 10px;
+      }
+
+      .status-bar.bottom-right {
+        bottom: 10px;
+        right: 10px;
+      }
+
+      #lobby {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        text-align: center;
+        min-width: 300px;
+      }
+
+      #lobby h2 {
+        margin-bottom: 20px;
+        color: #4caf50;
+      }
+
+      .player-info {
+        margin: 10px 0;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 5px;
+      }
+
+      .controls-info {
+        margin-top: 20px;
+        font-size: 12px;
+        color: #ccc;
+      }
+
+      .key-highlight {
+        background: #4caf50;
+        color: black;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-weight: bold;
+      }
+
+      #game-over {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.95);
+        color: white;
+        padding: 40px;
+        border-radius: 15px;
+        text-align: center;
+        min-width: 350px;
+        display: none;
+      }
+
+      #game-over h2 {
+        color: #f44336;
+        margin-bottom: 20px;
+      }
+
+      .stats {
+        display: flex;
+        justify-content: space-around;
+        margin: 20px 0;
+      }
+
+      .stat-item {
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #4caf50;
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: #ccc;
+        margin-top: 5px;
+      }
+
+      button {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        margin: 10px;
+        transition: background 0.3s;
+      }
+
+      button:hover {
+        background: #45a049;
+      }
+
+      button:disabled {
+        background: #666;
+        cursor: not-allowed;
+      }
+
+      .loading {
+        text-align: center;
+        color: white;
+        font-size: 18px;
+        margin-top: 20px;
+      }
+
+      .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #4caf50;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <div id="ui-overlay">
+        <!-- Status Bars -->
+        <div class="status-bar top-left" id="player1-status">
+          <div>Player 1 (W/A)</div>
+          <div>Deaths: <span id="player1-deaths">0</span></div>
+        </div>
+
+        <div class="status-bar top-right" id="player2-status">
+          <div>Player 2 (S/D)</div>
+          <div>Deaths: <span id="player2-deaths">0</span></div>
+        </div>
+
+        <div class="status-bar bottom-left" id="game-time">
+          <div>Time: <span id="time-display">00:00</span></div>
+        </div>
+
+        <div class="status-bar bottom-right" id="connection-status">
+          <div>Status: <span id="connection-text">Connecting...</span></div>
+        </div>
+
+        <!-- Lobby Screen -->
+        <div id="lobby">
+          <h2>🎮 WASD Game</h2>
+          <div class="loading">
+            <div class="spinner"></div>
+            <div>Waiting for players...</div>
+          </div>
+          <div id="lobby-content" style="display: none">
+            <div class="player-info">
+              <strong>Players Connected:</strong>
+              <div id="player-count">0/2</div>
+            </div>
+            <div class="controls-info">
+              <div>
+                <strong>Player 1:</strong>
+                <span class="key-highlight">W</span> (Up)
+                <span class="key-highlight">A</span> (Left)
+              </div>
+              <div>
+                <strong>Player 2:</strong>
+                <span class="key-highlight">S</span> (Down)
+                <span class="key-highlight">D</span> (Right)
+              </div>
+              <div style="margin-top: 10px; font-size: 11px">
+                Work together to control one character and avoid obstacles!
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over">
+          <h2>💀 Game Over!</h2>
+          <div class="stats">
+            <div class="stat-item">
+              <div class="stat-value" id="final-time">00:00</div>
+              <div class="stat-label">Total Time</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="total-deaths">0</div>
+              <div class="stat-label">Total Deaths</div>
+            </div>
+          </div>
+          <button onclick="restartGame()">🔄 Play Again</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

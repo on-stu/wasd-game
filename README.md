@@ -242,4 +242,3 @@ wasd-game/
 - Power-ups and special abilities
 - Different game modes
 - Leaderboards and achievements
-# wasd-game
